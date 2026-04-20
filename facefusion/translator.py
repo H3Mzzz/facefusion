@@ -1,35 +1,49 @@
 import importlib
 from typing import Optional
 
-from facefusion.types import Language, LocalePoolSet, Locales
+from facefusion.types import Language, LocalPoolSet, Locals
 
-LOCALE_POOL_SET : LocalePoolSet = {}
-CURRENT_LANGUAGE : Language = 'en'
+LOCAL_POOL_SET : LocalPoolSet = {}
+CURRENT_LANGUAGE : Language = 'zh'
 
 
 def __autoload__(module_name : str) -> None:
 	try:
-		__locales__ = importlib.import_module(module_name + '.locales')
-		load(__locales__.LOCALES, module_name)
+		__locals__ = importlib.import_module(module_name + '.locals')
+		load(__locals__.LOCALS, module_name)
 	except ImportError:
 		pass
 
 
-def load(__locales__ : Locales, module_name : str) -> None:
-	LOCALE_POOL_SET[module_name] = __locales__
+def load(__locals__ : Locals, module_name : str) -> None:
+	LOCAL_POOL_SET[module_name] = __locals__
+
 
 
 def get(notation : str, module_name : str = 'facefusion') -> Optional[str]:
-	if module_name not in LOCALE_POOL_SET:
-		__autoload__(module_name)
+    if module_name not in LOCAL_POOL_SET:
+        __autoload__(module_name)
 
-	current = LOCALE_POOL_SET.get(module_name).get(CURRENT_LANGUAGE)
+    module_locals = LOCAL_POOL_SET.get(module_name)
+    if not module_locals:
+        return None
 
-	for fragment in notation.split('.'):
-		if fragment in current:
-			current = current.get(fragment)
+    current = module_locals.get(CURRENT_LANGUAGE)
+    if current is None:
+        current = module_locals.get('en')
 
-			if isinstance(current, str):
-				return current
+    if current is None:
+        return None
 
-	return None
+    for fragment in notation.split('.'):
+
+        if isinstance(current, dict) and fragment in current:
+            current = current.get(fragment)
+
+            if isinstance(current, str):
+                return current
+        else:
+
+            break
+
+    return None
